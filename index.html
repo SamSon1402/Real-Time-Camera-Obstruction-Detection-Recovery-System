@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Harmattan AI - Camera Obstruction Detection System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;800;900&family=Share+Tech+Mono&family=Rajdhani:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #00ff88;
+            --primary-dim: #00cc6a;
+            --secondary: #ff6b35;
+            --warning: #ffcc00;
+            --danger: #ff3366;
+            --tactical-blue: #00b4d8;
+            --bg-primary: #0a0d0f;
+            --bg-secondary: #0f1419;
+            --bg-tertiary: #151c24;
+            --bg-card: #1a232d;
+            --border: #2a3a4a;
+            --border-glow: #00ff8833;
+            --text-primary: #e8f0f2;
+            --text-secondary: #8a9bab;
+            --text-muted: #5a6a7a;
+            --grid-color: #1a2a3a;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Rajdhani', sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow-x: hidden;
+        }
+
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: 
+                radial-gradient(circle at 20% 80%, rgba(255, 51, 102, 0.03) 0%, transparent 50%),
+                radial-gradient(circle at 80% 20%, rgba(0, 180, 216, 0.03) 0%, transparent 50%);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .header {
+            background: linear-gradient(180deg, var(--bg-secondary) 0%, transparent 100%);
+            border-bottom: 1px solid var(--border);
+            padding: 1rem 2rem;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            backdrop-filter: blur(20px);
+        }
+
+        .header-content {
+            max-width: 1800px;
+            margin: 0 auto;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .logo-icon {
+            width: 52px;
+            height: 52px;
+            background: linear-gradient(135deg, var(--danger) 0%, var(--warning) 100%);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            clip-path: polygon(10% 0%, 100% 0%, 100% 90%, 90% 100%, 0% 100%, 0% 10%);
+        }
+
+        .logo-text {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.6rem;
+            font-weight: 700;
+            background: linear-gradient(90deg, var(--danger) 0%, var(--warning) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            letter-spacing: 2px;
+        }
+
+        .logo-subtitle {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 3px;
+        }
+
+        .alert-banner {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        .alert-badge {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            padding: 0.5rem 1rem;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--text-secondary);
+            clip-path: polygon(8px 0%, 100% 0%, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0% 100%, 0% 8px);
+        }
+
+        .alert-badge.warning {
+            border-color: var(--warning);
+            color: var(--warning);
+            animation: warningPulse 2s infinite;
+        }
+
+        .alert-badge.danger {
+            border-color: var(--danger);
+            color: var(--danger);
+            animation: dangerPulse 1s infinite;
+        }
+
+        @keyframes warningPulse {
+            0%, 100% { box-shadow: 0 0 10px rgba(255, 204, 0, 0.3); }
+            50% { box-shadow: 0 0 20px rgba(255, 204, 0, 0.5); }
+        }
+
+        @keyframes dangerPulse {
+            0%, 100% { box-shadow: 0 0 10px rgba(255, 51, 102, 0.3); }
+            50% { box-shadow: 0 0 25px rgba(255, 51, 102, 0.6); }
+        }
+
+        .main {
+            max-width: 1800px;
+            margin: 0 auto;
+            padding: 2rem;
+            position: relative;
+            z-index: 1;
+        }
+
+        .hero {
+            text-align: center;
+            margin-bottom: 2rem;
+            padding: 2rem 0;
+        }
+
+        .hero h1 {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 2.6rem;
+            font-weight: 800;
+            margin-bottom: 0.75rem;
+            background: linear-gradient(90deg, var(--danger), var(--warning), var(--danger));
+            background-size: 200% auto;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            animation: shimmer 3s linear infinite;
+            letter-spacing: 3px;
+        }
+
+        @keyframes shimmer {
+            to { background-position: 200% center; }
+        }
+
+        .hero p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-weight: 500;
+        }
+
+        .workspace {
+            display: grid;
+            grid-template-columns: 1fr 380px;
+            gap: 1.5rem;
+        }
+
+        @media (max-width: 1400px) {
+            .workspace { grid-template-columns: 1fr; }
+        }
+
+        .card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            overflow: hidden;
+            position: relative;
+            clip-path: polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, var(--warning), transparent);
+        }
+
+        .card-header {
+            padding: 1rem 1.5rem;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--bg-tertiary);
+        }
+
+        .card-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+            font-weight: 600;
+            letter-spacing: 2px;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-transform: uppercase;
+        }
+
+        .card-body { padding: 1.5rem; }
+
+        /* Camera Feed Display */
+        .camera-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 1rem;
+        }
+
+        .camera-feed {
+            background: var(--bg-primary);
+            border: 2px solid var(--border);
+            border-radius: 4px;
+            aspect-ratio: 16/10;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .camera-feed.obstructed {
+            border-color: var(--danger);
+            animation: dangerBorder 1s infinite;
+        }
+
+        .camera-feed.partial {
+            border-color: var(--warning);
+        }
+
+        @keyframes dangerBorder {
+            0%, 100% { border-color: var(--danger); }
+            50% { border-color: var(--warning); }
+        }
+
+        .camera-canvas {
+            width: 100%;
+            height: 100%;
+        }
+
+        .camera-overlay {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .camera-label {
+            position: absolute;
+            top: 0.5rem;
+            left: 0.5rem;
+            background: rgba(10, 13, 15, 0.9);
+            border: 1px solid var(--border);
+            padding: 0.25rem 0.75rem;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--primary);
+            text-transform: uppercase;
+        }
+
+        .camera-status {
+            position: absolute;
+            top: 0.5rem;
+            right: 0.5rem;
+            background: rgba(10, 13, 15, 0.9);
+            border: 1px solid var(--primary);
+            padding: 0.25rem 0.75rem;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--primary);
+        }
+
+        .camera-status.warning {
+            border-color: var(--warning);
+            color: var(--warning);
+        }
+
+        .camera-status.danger {
+            border-color: var(--danger);
+            color: var(--danger);
+        }
+
+        /* Obstruction Visualization */
+        .obstruction-mask {
+            position: absolute;
+            inset: 0;
+            pointer-events: none;
+        }
+
+        .obstruction-region {
+            position: absolute;
+            border: 2px dashed var(--danger);
+            background: rgba(255, 51, 102, 0.2);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.7rem;
+            color: var(--danger);
+        }
+
+        /* Detection Controls */
+        .obstruction-types {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 0.75rem;
+            margin-top: 1.5rem;
+        }
+
+        .obstruction-btn {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            padding: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            text-align: center;
+            clip-path: polygon(8px 0%, 100% 0%, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0% 100%, 0% 8px);
+        }
+
+        .obstruction-btn:hover {
+            background: var(--bg-card);
+            border-color: var(--warning);
+        }
+
+        .obstruction-btn.active {
+            background: rgba(255, 204, 0, 0.1);
+            border-color: var(--warning);
+        }
+
+        .obstruction-icon {
+            font-size: 1.5rem;
+            margin-bottom: 0.5rem;
+        }
+
+        .obstruction-name {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        /* Recovery Mode Panel */
+        .recovery-panel {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            padding: 1rem;
+            margin-top: 1.5rem;
+        }
+
+        .recovery-title {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.75rem;
+            color: var(--tactical-blue);
+            margin-bottom: 1rem;
+            letter-spacing: 1px;
+        }
+
+        .recovery-options {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+        }
+
+        .recovery-option {
+            background: var(--bg-primary);
+            border: 1px solid var(--border);
+            padding: 0.75rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .recovery-option:hover {
+            border-color: var(--tactical-blue);
+        }
+
+        .recovery-option.active {
+            border-color: var(--tactical-blue);
+            background: rgba(0, 180, 216, 0.1);
+        }
+
+        .recovery-option-name {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+        .recovery-option-desc {
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            margin-top: 0.25rem;
+        }
+
+        /* Action Button */
+        .btn-primary {
+            width: 100%;
+            background: linear-gradient(135deg, var(--warning) 0%, var(--secondary) 100%);
+            border: none;
+            padding: 1.25rem;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: 1rem;
+            font-weight: 700;
+            color: var(--bg-primary);
+            cursor: pointer;
+            margin-top: 1.5rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            clip-path: polygon(10px 0%, 100% 0%, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0% 100%, 0% 10px);
+            transition: all 0.3s;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 0 30px rgba(255, 204, 0, 0.4);
+        }
+
+        /* Sidebar */
+        .sidebar { display: flex; flex-direction: column; gap: 1rem; }
+
+        /* Detection Results */
+        .detection-result {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            padding: 1rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .detection-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 0.75rem;
+        }
+
+        .detection-type {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.75rem;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .detection-severity {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.7rem;
+            padding: 0.2rem 0.5rem;
+            border-radius: 2px;
+        }
+
+        .detection-severity.low {
+            background: rgba(0, 255, 136, 0.2);
+            color: var(--primary);
+        }
+
+        .detection-severity.medium {
+            background: rgba(255, 204, 0, 0.2);
+            color: var(--warning);
+        }
+
+        .detection-severity.high {
+            background: rgba(255, 51, 102, 0.2);
+            color: var(--danger);
+        }
+
+        .detection-bar {
+            height: 6px;
+            background: var(--bg-primary);
+            border-radius: 3px;
+            overflow: hidden;
+        }
+
+        .detection-fill {
+            height: 100%;
+            transition: width 0.5s;
+        }
+
+        .detection-info {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 0.5rem;
+            font-size: 0.7rem;
+            color: var(--text-muted);
+        }
+
+        /* Metrics */
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 0.75rem;
+        }
+
+        .metric-card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            padding: 1rem;
+            text-align: center;
+        }
+
+        .metric-label {
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 0.65rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 0.5rem;
+        }
+
+        .metric-value {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 0.75rem 0;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.85rem;
+        }
+
+        .stat-label { color: var(--text-muted); }
+        .stat-value { 
+            font-family: 'Share Tech Mono', monospace; 
+            font-weight: 600;
+        }
+
+        /* Alert Log */
+        .alert-log {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .alert-item {
+            display: flex;
+            gap: 0.75rem;
+            padding: 0.75rem;
+            background: var(--bg-primary);
+            border-left: 3px solid var(--border);
+            margin-bottom: 0.5rem;
+            font-size: 0.75rem;
+        }
+
+        .alert-item.warning { border-color: var(--warning); }
+        .alert-item.danger { border-color: var(--danger); }
+        .alert-item.info { border-color: var(--tactical-blue); }
+
+        .alert-time {
+            font-family: 'Share Tech Mono', monospace;
+            color: var(--text-muted);
+            white-space: nowrap;
+        }
+
+        .alert-message { color: var(--text-secondary); }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--bg-card);
+            border: 1px solid var(--warning);
+            padding: 1rem 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            transform: translateY(100px);
+            opacity: 0;
+            transition: all 0.3s;
+            z-index: 1000;
+            clip-path: polygon(10px 0%, 100% 0%, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0% 100%, 0% 10px);
+        }
+
+        .toast.show {
+            transform: translateY(0);
+            opacity: 1;
+        }
+
+        .toast-icon { font-size: 1.5rem; }
+        .toast-title { 
+            font-family: 'Orbitron', sans-serif;
+            font-size: 0.85rem;
+        }
+        .toast-message { 
+            font-size: 0.75rem; 
+            color: var(--text-muted); 
+        }
+
+        /* Processing Overlay */
+        .processing-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(10, 13, 15, 0.95);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .processing-overlay.active { display: flex; }
+
+        .scanner {
+            width: 150px;
+            height: 150px;
+            border: 3px solid var(--border);
+            border-radius: 8px;
+            position: relative;
+            margin-bottom: 1.5rem;
+            overflow: hidden;
+        }
+
+        .scanner-line {
+            position: absolute;
+            left: 0;
+            right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, transparent, var(--warning), transparent);
+            animation: scan 2s infinite;
+        }
+
+        @keyframes scan {
+            0% { top: 0; }
+            50% { top: calc(100% - 3px); }
+            100% { top: 0; }
+        }
+
+        .scanner-grid {
+            position: absolute;
+            inset: 0;
+            background: 
+                linear-gradient(90deg, var(--border) 1px, transparent 1px),
+                linear-gradient(var(--border) 1px, transparent 1px);
+            background-size: 15px 15px;
+            opacity: 0.3;
+        }
+
+        .processing-text {
+            font-family: 'Orbitron', sans-serif;
+            font-size: 1rem;
+            letter-spacing: 2px;
+            color: var(--warning);
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="header-content">
+            <div class="logo">
+                <div class="logo-icon">👁️</div>
+                <div>
+                    <div class="logo-text">HARMATTAN AI</div>
+                    <div class="logo-subtitle">Camera Obstruction Detection // Sensor Recovery</div>
+                </div>
+            </div>
+            <div class="alert-banner">
+                <span class="alert-badge" id="systemStatus">MONITORING</span>
+                <span class="alert-badge" id="alertLevel">ALL CLEAR</span>
+            </div>
+        </div>
+    </header>
+
+    <main class="main">
+        <div class="hero">
+            <h1>🔍 OBSTRUCTION DETECTION SYSTEM</h1>
+            <p>Real-time sensor degradation detection with automatic VIO pipeline adaptation</p>
+        </div>
+
+        <div class="workspace">
+            <div class="card">
+                <div class="card-header">
+                    <h3 class="card-title">📹 Multi-Camera Feed Analysis</h3>
+                    <span style="font-family: 'Share Tech Mono'; font-size: 0.7rem; color: var(--text-muted);">ANALYZING...</span>
+                </div>
+                <div class="card-body">
+                    <div class="camera-grid">
+                        <div class="camera-feed" id="cam1">
+                            <canvas id="canvas1" class="camera-canvas"></canvas>
+                            <div class="obstruction-mask" id="mask1"></div>
+                            <div class="camera-label">CAM 1 - LEFT STEREO</div>
+                            <div class="camera-status" id="status1">CLEAR</div>
+                        </div>
+                        <div class="camera-feed" id="cam2">
+                            <canvas id="canvas2" class="camera-canvas"></canvas>
+                            <div class="obstruction-mask" id="mask2"></div>
+                            <div class="camera-label">CAM 2 - RIGHT STEREO</div>
+                            <div class="camera-status" id="status2">CLEAR</div>
+                        </div>
+                        <div class="camera-feed" id="cam3">
+                            <canvas id="canvas3" class="camera-canvas"></canvas>
+                            <div class="obstruction-mask" id="mask3"></div>
+                            <div class="camera-label">CAM 3 - FORWARD</div>
+                            <div class="camera-status" id="status3">CLEAR</div>
+                        </div>
+                        <div class="camera-feed" id="cam4">
+                            <canvas id="canvas4" class="camera-canvas"></canvas>
+                            <div class="obstruction-mask" id="mask4"></div>
+                            <div class="camera-label">CAM 4 - DOWNWARD</div>
+                            <div class="camera-status" id="status4">CLEAR</div>
+                        </div>
+                    </div>
+
+                    <div class="obstruction-types">
+                        <div class="obstruction-btn" onclick="simulateObstruction('dust')" id="btn-dust">
+                            <div class="obstruction-icon">💨</div>
+                            <div class="obstruction-name">Dust/Debris</div>
+                        </div>
+                        <div class="obstruction-btn" onclick="simulateObstruction('water')" id="btn-water">
+                            <div class="obstruction-icon">💧</div>
+                            <div class="obstruction-name">Water Droplets</div>
+                        </div>
+                        <div class="obstruction-btn" onclick="simulateObstruction('smoke')" id="btn-smoke">
+                            <div class="obstruction-icon">🌫️</div>
+                            <div class="obstruction-name">Smoke/Fog</div>
+                        </div>
+                        <div class="obstruction-btn" onclick="simulateObstruction('damage')" id="btn-damage">
+                            <div class="obstruction-icon">💥</div>
+                            <div class="obstruction-name">Lens Damage</div>
+                        </div>
+                    </div>
+
+                    <div class="recovery-panel">
+                        <div class="recovery-title">⚡ RECOVERY MODE SELECTION</div>
+                        <div class="recovery-options">
+                            <div class="recovery-option active" onclick="setRecoveryMode('auto')" id="recovery-auto">
+                                <div class="recovery-option-name">Auto Switch</div>
+                                <div class="recovery-option-desc">Backup camera</div>
+                            </div>
+                            <div class="recovery-option" onclick="setRecoveryMode('imu')" id="recovery-imu">
+                                <div class="recovery-option-name">IMU Only</div>
+                                <div class="recovery-option-desc">Dead reckoning</div>
+                            </div>
+                            <div class="recovery-option" onclick="setRecoveryMode('partial')" id="recovery-partial">
+                                <div class="recovery-option-name">Partial Vision</div>
+                                <div class="recovery-option-desc">Use clear regions</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" onclick="runDiagnostics()">
+                        🔬 RUN FULL DIAGNOSTICS
+                    </button>
+                </div>
+            </div>
+
+            <div class="sidebar">
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">🎯 Detection Results</h3>
+                    </div>
+                    <div class="card-body" id="detectionResults">
+                        <div class="detection-result">
+                            <div class="detection-header">
+                                <span class="detection-type">VISIBILITY</span>
+                                <span class="detection-severity low">GOOD</span>
+                            </div>
+                            <div class="detection-bar">
+                                <div class="detection-fill" style="width: 95%; background: var(--primary);"></div>
+                            </div>
+                            <div class="detection-info">
+                                <span>All cameras</span>
+                                <span id="visibilityScore">95%</span>
+                            </div>
+                        </div>
+                        <div class="detection-result">
+                            <div class="detection-header">
+                                <span class="detection-type">OBSTRUCTION</span>
+                                <span class="detection-severity low" id="obstructionSeverity">NONE</span>
+                            </div>
+                            <div class="detection-bar">
+                                <div class="detection-fill" id="obstructionBar" style="width: 0%; background: var(--danger);"></div>
+                            </div>
+                            <div class="detection-info">
+                                <span>Coverage</span>
+                                <span id="obstructionPercent">0%</span>
+                            </div>
+                        </div>
+                        <div class="detection-result">
+                            <div class="detection-header">
+                                <span class="detection-type">VIO CONFIDENCE</span>
+                                <span class="detection-severity low" id="vioSeverity">HIGH</span>
+                            </div>
+                            <div class="detection-bar">
+                                <div class="detection-fill" id="vioBar" style="width: 98%; background: var(--tactical-blue);"></div>
+                            </div>
+                            <div class="detection-info">
+                                <span>Tracking quality</span>
+                                <span id="vioConfidence">98%</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">📊 System Metrics</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="metrics-grid">
+                            <div class="metric-card">
+                                <div class="metric-label">Detection Rate</div>
+                                <div class="metric-value" id="detectionRate">30<span style="font-size: 0.8rem;">Hz</span></div>
+                            </div>
+                            <div class="metric-card">
+                                <div class="metric-label">Latency</div>
+                                <div class="metric-value" id="latency">12<span style="font-size: 0.8rem;">ms</span></div>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: 1rem;">
+                            <div class="stat-row">
+                                <span class="stat-label">Model</span>
+                                <span class="stat-value">CNN + Edge Det.</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Accuracy</span>
+                                <span class="stat-value" style="color: var(--primary);">99.2%</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">False Positive</span>
+                                <span class="stat-value">0.3%</span>
+                            </div>
+                            <div class="stat-row">
+                                <span class="stat-label">Recovery Time</span>
+                                <span class="stat-value" id="recoveryTime">&lt;50ms</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header">
+                        <h3 class="card-title">📋 Alert Log</h3>
+                    </div>
+                    <div class="card-body">
+                        <div class="alert-log" id="alertLog">
+                            <div class="alert-item info">
+                                <span class="alert-time">00:00:00</span>
+                                <span class="alert-message">System initialized</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div class="processing-overlay" id="processingOverlay">
+        <div class="scanner">
+            <div class="scanner-grid"></div>
+            <div class="scanner-line"></div>
+        </div>
+        <div class="processing-text" id="processingText">SCANNING CAMERAS...</div>
+    </div>
+
+    <div class="toast" id="toast">
+        <span class="toast-icon">⚠️</span>
+        <div>
+            <div class="toast-title" id="toastTitle">Alert</div>
+            <div class="toast-message" id="toastMessage">Obstruction detected</div>
+        </div>
+    </div>
+
+    <script>
+        // Canvas setup
+        const canvases = [
+            document.getElementById('canvas1'),
+            document.getElementById('canvas2'),
+            document.getElementById('canvas3'),
+            document.getElementById('canvas4')
+        ];
+        const contexts = canvases.map(c => c.getContext('2d'));
+
+        let currentObstruction = null;
+        let recoveryMode = 'auto';
+        let obstructedCameras = new Set();
+
+        function resizeCanvases() {
+            canvases.forEach(canvas => {
+                canvas.width = canvas.offsetWidth;
+                canvas.height = canvas.offsetHeight;
+            });
+            drawAllCameras();
+        }
+
+        window.addEventListener('resize', resizeCanvases);
+        setTimeout(resizeCanvases, 100);
+
+        // Draw camera feed simulation
+        function drawCameraFeed(ctx, index, obstruction = null) {
+            const w = ctx.canvas.width;
+            const h = ctx.canvas.height;
+
+            // Base scene
+            ctx.fillStyle = '#0f1419';
+            ctx.fillRect(0, 0, w, h);
+
+            // Simulated environment
+            ctx.strokeStyle = '#2a3a4a';
+            ctx.lineWidth = 1;
+            
+            // Horizon line
+            ctx.beginPath();
+            ctx.moveTo(0, h * 0.4);
+            ctx.lineTo(w, h * 0.4);
+            ctx.stroke();
+
+            // Ground features
+            for (let i = 0; i < 8; i++) {
+                const x = (i / 8) * w;
+                ctx.beginPath();
+                ctx.moveTo(x, h * 0.4);
+                ctx.lineTo(x + w * 0.05, h);
+                ctx.stroke();
+            }
+
+            // Buildings/obstacles
+            ctx.fillStyle = '#1a232d';
+            for (let i = 0; i < 4; i++) {
+                const bx = 20 + i * (w / 4);
+                const bh = 50 + Math.random() * 80;
+                ctx.fillRect(bx, h * 0.4 - bh, 40, bh);
+            }
+
+            // Feature points
+            ctx.fillStyle = '#00ff88';
+            for (let i = 0; i < 20; i++) {
+                const x = Math.random() * w;
+                const y = Math.random() * h;
+                ctx.beginPath();
+                ctx.arc(x, y, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+
+            // Apply obstruction effect
+            if (obstruction && obstructedCameras.has(index)) {
+                applyObstructionEffect(ctx, obstruction);
+            }
+
+            // Scanlines
+            ctx.strokeStyle = 'rgba(0, 255, 136, 0.02)';
+            for (let y = 0; y < h; y += 2) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(w, y);
+                ctx.stroke();
+            }
+        }
+
+        function applyObstructionEffect(ctx, type) {
+            const w = ctx.canvas.width;
+            const h = ctx.canvas.height;
+
+            switch (type) {
+                case 'dust':
+                    ctx.fillStyle = 'rgba(139, 119, 101, 0.6)';
+                    for (let i = 0; i < 50; i++) {
+                        ctx.beginPath();
+                        ctx.arc(Math.random() * w, Math.random() * h, Math.random() * 15 + 5, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    break;
+
+                case 'water':
+                    ctx.fillStyle = 'rgba(100, 180, 255, 0.4)';
+                    for (let i = 0; i < 30; i++) {
+                        const x = Math.random() * w;
+                        const y = Math.random() * h;
+                        ctx.beginPath();
+                        ctx.ellipse(x, y, 8 + Math.random() * 12, 12 + Math.random() * 18, 0, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
+                    break;
+
+                case 'smoke':
+                    const gradient = ctx.createRadialGradient(w/2, h/2, 0, w/2, h/2, w * 0.7);
+                    gradient.addColorStop(0, 'rgba(80, 80, 80, 0.7)');
+                    gradient.addColorStop(1, 'rgba(40, 40, 40, 0.3)');
+                    ctx.fillStyle = gradient;
+                    ctx.fillRect(0, 0, w, h);
+                    break;
+
+                case 'damage':
+                    // Crack pattern
+                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+                    ctx.lineWidth = 2;
+                    const cx = w * 0.3;
+                    const cy = h * 0.4;
+                    for (let i = 0; i < 8; i++) {
+                        const angle = (i / 8) * Math.PI * 2;
+                        const length = 30 + Math.random() * 50;
+                        ctx.beginPath();
+                        ctx.moveTo(cx, cy);
+                        ctx.lineTo(cx + Math.cos(angle) * length, cy + Math.sin(angle) * length);
+                        ctx.stroke();
+                    }
+                    // Black spot
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.9)';
+                    ctx.beginPath();
+                    ctx.arc(cx, cy, 20, 0, Math.PI * 2);
+                    ctx.fill();
+                    break;
+            }
+        }
+
+        function drawAllCameras() {
+            contexts.forEach((ctx, i) => {
+                drawCameraFeed(ctx, i, currentObstruction);
+            });
+        }
+
+        // Simulate obstruction
+        function simulateObstruction(type) {
+            // Clear previous
+            document.querySelectorAll('.obstruction-btn').forEach(btn => btn.classList.remove('active'));
+            document.getElementById(`btn-${type}`).classList.add('active');
+
+            currentObstruction = type;
+            
+            // Randomly affect 1-2 cameras
+            obstructedCameras.clear();
+            const numAffected = 1 + Math.floor(Math.random() * 2);
+            while (obstructedCameras.size < numAffected) {
+                obstructedCameras.add(Math.floor(Math.random() * 4));
+            }
+
+            // Update camera states
+            for (let i = 0; i < 4; i++) {
+                const camEl = document.getElementById(`cam${i + 1}`);
+                const statusEl = document.getElementById(`status${i + 1}`);
+                const maskEl = document.getElementById(`mask${i + 1}`);
+
+                if (obstructedCameras.has(i)) {
+                    camEl.classList.add(type === 'damage' ? 'obstructed' : 'partial');
+                    statusEl.textContent = type === 'damage' ? 'CRITICAL' : 'DEGRADED';
+                    statusEl.className = `camera-status ${type === 'damage' ? 'danger' : 'warning'}`;
+                    
+                    // Add obstruction region indicator
+                    maskEl.innerHTML = `<div class="obstruction-region" style="left: 10%; top: 10%; width: 60%; height: 60%;">${type.toUpperCase()}</div>`;
+                } else {
+                    camEl.classList.remove('obstructed', 'partial');
+                    statusEl.textContent = 'CLEAR';
+                    statusEl.className = 'camera-status';
+                    maskEl.innerHTML = '';
+                }
+            }
+
+            // Update system status
+            const systemStatus = document.getElementById('systemStatus');
+            const alertLevel = document.getElementById('alertLevel');
+            
+            if (type === 'damage') {
+                systemStatus.textContent = 'ALERT';
+                systemStatus.className = 'alert-badge danger';
+                alertLevel.textContent = 'CRITICAL';
+                alertLevel.className = 'alert-badge danger';
+            } else {
+                systemStatus.textContent = 'WARNING';
+                systemStatus.className = 'alert-badge warning';
+                alertLevel.textContent = 'DEGRADED';
+                alertLevel.className = 'alert-badge warning';
+            }
+
+            // Update metrics
+            const coverage = 20 + Math.random() * 40;
+            document.getElementById('obstructionBar').style.width = coverage + '%';
+            document.getElementById('obstructionPercent').textContent = coverage.toFixed(0) + '%';
+            document.getElementById('obstructionSeverity').textContent = type === 'damage' ? 'HIGH' : 'MEDIUM';
+            document.getElementById('obstructionSeverity').className = `detection-severity ${type === 'damage' ? 'high' : 'medium'}`;
+
+            const visibility = 100 - coverage;
+            document.getElementById('visibilityScore').textContent = visibility.toFixed(0) + '%';
+
+            const vioConf = Math.max(50, 98 - coverage);
+            document.getElementById('vioBar').style.width = vioConf + '%';
+            document.getElementById('vioConfidence').textContent = vioConf.toFixed(0) + '%';
+            document.getElementById('vioSeverity').textContent = vioConf > 80 ? 'HIGH' : vioConf > 60 ? 'MEDIUM' : 'LOW';
+            document.getElementById('vioSeverity').className = `detection-severity ${vioConf > 80 ? 'low' : vioConf > 60 ? 'medium' : 'high'}`;
+
+            // Add alert
+            addAlert(type === 'damage' ? 'danger' : 'warning', 
+                     `${type.charAt(0).toUpperCase() + type.slice(1)} detected on ${obstructedCameras.size} camera(s)`);
+
+            drawAllCameras();
+            showToast('Obstruction Detected', `${type.charAt(0).toUpperCase() + type.slice(1)} affecting ${obstructedCameras.size} camera(s)`);
+
+            // Simulate recovery
+            setTimeout(() => {
+                if (recoveryMode === 'auto') {
+                    addAlert('info', `Recovery: Switching to backup sensors`);
+                } else if (recoveryMode === 'imu') {
+                    addAlert('info', `Recovery: IMU-only mode activated`);
+                } else {
+                    addAlert('info', `Recovery: Using unobstructed image regions`);
+                }
+            }, 1500);
+        }
+
+        function setRecoveryMode(mode) {
+            recoveryMode = mode;
+            document.querySelectorAll('.recovery-option').forEach(opt => opt.classList.remove('active'));
+            document.getElementById(`recovery-${mode}`).classList.add('active');
+            showToast('Recovery Mode', `Set to ${mode === 'auto' ? 'Auto Switch' : mode === 'imu' ? 'IMU Only' : 'Partial Vision'}`);
+        }
+
+        function addAlert(type, message) {
+            const log = document.getElementById('alertLog');
+            const time = new Date().toLocaleTimeString('en-US', { hour12: false });
+            const item = document.createElement('div');
+            item.className = `alert-item ${type}`;
+            item.innerHTML = `<span class="alert-time">${time}</span><span class="alert-message">${message}</span>`;
+            log.insertBefore(item, log.firstChild);
+            
+            // Keep only last 10 alerts
+            while (log.children.length > 10) {
+                log.removeChild(log.lastChild);
+            }
+        }
+
+        function runDiagnostics() {
+            const overlay = document.getElementById('processingOverlay');
+            const text = document.getElementById('processingText');
+            overlay.classList.add('active');
+
+            const stages = [
+                'SCANNING CAMERAS...',
+                'CHECKING CALIBRATION...',
+                'TESTING CONNECTIVITY...',
+                'ANALYZING IMAGE QUALITY...',
+                'VALIDATING STEREO PAIRS...',
+                'DIAGNOSTICS COMPLETE'
+            ];
+
+            let i = 0;
+            const interval = setInterval(() => {
+                if (i < stages.length) {
+                    text.textContent = stages[i];
+                    i++;
+                } else {
+                    clearInterval(interval);
+                    overlay.classList.remove('active');
+                    
+                    // Clear obstructions
+                    currentObstruction = null;
+                    obstructedCameras.clear();
+                    
+                    for (let j = 0; j < 4; j++) {
+                        document.getElementById(`cam${j + 1}`).classList.remove('obstructed', 'partial');
+                        document.getElementById(`status${j + 1}`).textContent = 'CLEAR';
+                        document.getElementById(`status${j + 1}`).className = 'camera-status';
+                        document.getElementById(`mask${j + 1}`).innerHTML = '';
+                    }
+
+                    document.getElementById('systemStatus').textContent = 'MONITORING';
+                    document.getElementById('systemStatus').className = 'alert-badge';
+                    document.getElementById('alertLevel').textContent = 'ALL CLEAR';
+                    document.getElementById('alertLevel').className = 'alert-badge';
+
+                    document.getElementById('obstructionBar').style.width = '0%';
+                    document.getElementById('obstructionPercent').textContent = '0%';
+                    document.getElementById('obstructionSeverity').textContent = 'NONE';
+                    document.getElementById('obstructionSeverity').className = 'detection-severity low';
+                    document.getElementById('visibilityScore').textContent = '95%';
+                    document.getElementById('vioBar').style.width = '98%';
+                    document.getElementById('vioConfidence').textContent = '98%';
+
+                    document.querySelectorAll('.obstruction-btn').forEach(btn => btn.classList.remove('active'));
+                    
+                    drawAllCameras();
+                    addAlert('info', 'Full diagnostics completed - All systems nominal');
+                    showToast('Diagnostics Complete', 'All cameras operational');
+                }
+            }, 600);
+        }
+
+        function showToast(title, message) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastTitle').textContent = title;
+            document.getElementById('toastMessage').textContent = message;
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 3000);
+        }
+
+        // Initialize
+        setTimeout(() => {
+            resizeCanvases();
+            addAlert('info', 'Obstruction detection system online');
+        }, 200);
+
+        // Periodic redraw for animation effect
+        setInterval(() => {
+            drawAllCameras();
+        }, 100);
+    </script>
+</body>
+</html>
